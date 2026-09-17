@@ -442,13 +442,138 @@ func TestFailureAndMissingKey(t *testing.T) {
 		t.Fatal("changed SSH")
 	}
 }
+func TestActionMenuAndDeletion(t *testing.T) {
+	for _, outcome := range []string{"success", "failure", "cancel", "active"} {
+		t.Run(outcome, func(t *testing.T) {
+			calls := 0
+			m := NewModel([]Profile{{"one", "One", "one@example.com", ""}, {"two", "Two", "two@example.com", ""}}, "one", func(Profile) (string, error) { t.Fatal("unexpected activation"); return "", nil }).WithCreator(func(Profile) error { t.Fatal("unexpected creation"); return nil }).WithDeleter(func(id string) error {
+				calls++
+				if id != "two" {
+					t.Fatal(id)
+				}
+				if outcome == "failure" {
+					return errors.New("disk denied")
+				}
+				return nil
+			})
+			key := func(k tea.KeyType) tea.Cmd { next, cmd := m.Update(tea.KeyMsg{Type: k}); m = next.(Model); return cmd }
+			for _, text := range []string{"GitVM", "> Switch profile", "Create profile", "Delete profile", "╭", "Enter"} {
+				if !strings.Contains(m.View(), text) {
+					t.Fatalf("missing %q: %s", text, m.View())
+				}
+			}
+			key(tea.KeyDown)
+			key(tea.KeyDown)
+			key(tea.KeyEnter)
+			if !strings.Contains(m.View(), "[active]") {
+				t.Fatal(m.View())
+			}
+			if outcome == "active" {
+				if key(tea.KeyEnter) != nil || calls != 0 || !strings.Contains(m.View(), "Cannot delete active profile") {
+					t.Fatal(m.View())
+				}
+				return
+			}
+			key(tea.KeyDown)
+			if key(tea.KeyEnter) != nil || calls != 0 || !strings.Contains(m.View(), "Confirm deletion of two") {
+				t.Fatal(m.View())
+			}
+			if outcome == "cancel" {
+				key(tea.KeyEsc)
+				key(tea.KeyEsc)
+				if calls != 0 || !strings.Contains(m.View(), "> Delete profile") {
+					t.Fatal(m.View())
+				}
+				return
+			}
+			cmd := key(tea.KeyEnter)
+			if cmd == nil || calls != 0 {
+				t.Fatal("deletion not deferred")
+			}
+			if key(tea.KeyEnter) != nil {
+				t.Fatal("duplicate deletion")
+			}
+			next, _ := m.Update(cmd())
+			m = next.(Model)
+			if calls != 1 || m.current != "one" {
+				t.Fatal("unsafe deletion")
+			}
+			if outcome == "failure" {
+				key(tea.KeyUp)
+				if len(m.profiles) != 2 || !strings.Contains(m.View(), "Deletion failed: disk denied") {
+					t.Fatal(m.View())
+				}
+			} else if len(m.profiles) != 1 || !strings.Contains(m.View(), "Deleted two") {
+				t.Fatal(m.View())
+			}
+		})
+	}
+}
+
+func TestActionCancellationAndActivationFailure(t *testing.T) {
+	for _, cancel := range []tea.KeyMsg{{Type: tea.KeyEsc}, {Type: tea.KeyCtrlC}, {Type: tea.KeyRunes, Runes: []rune{'q'}}} {
+		m := NewModel([]Profile{{"one", "One", "one@example.com", ""}}, "old", func(Profile) (string, error) { return "", errors.New("git denied") })
+		key := func(k tea.KeyMsg) tea.Cmd { next, cmd := m.Update(k); m = next.(Model); return cmd }
+		enter := tea.KeyMsg{Type: tea.KeyEnter}
+		key(enter)
+		key(enter)
+		if cmd := key(cancel); cmd != nil || strings.Contains(m.View(), "Confirm activation") {
+			t.Fatal("confirmation cancellation", m.View())
+		}
+		key(enter)
+		cmd := key(enter)
+		if cmd == nil {
+			t.Fatal("missing command")
+		}
+		if key(enter) != nil {
+			t.Fatal("duplicate activation")
+		}
+		next, _ := m.Update(cmd())
+		m = next.(Model)
+		if m.current != "old" || !strings.Contains(m.View(), "Activation failed: git denied") {
+			t.Fatal(m.View())
+		}
+		key(cancel)
+		if !strings.Contains(m.View(), "> Switch profile") {
+			t.Fatal("selection cancellation", m.View())
+		}
+	}
+	m := NewModel(nil, "", nil).WithCreator(func(Profile) error { t.Fatal("navigation created profile"); return nil })
+	for _, k := range []tea.KeyType{tea.KeyDown, tea.KeyEnter} {
+		next, cmd := m.Update(tea.KeyMsg{Type: k})
+		m = next.(Model)
+		if cmd != nil {
+			t.Fatal("menu side effect")
+		}
+	}
+	if !strings.Contains(m.View(), "Profile ID:") {
+		t.Fatal("create action unreachable", m.View())
+	}
+	for _, action := range []int{0, 2} {
+		m = NewModel(nil, "", nil)
+		m.action = action
+		for range 3 {
+			next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+			m = next.(Model)
+			if cmd != nil {
+				t.Fatal("empty selection command")
+			}
+		}
+		if !strings.Contains(m.View(), "No valid profiles") {
+			t.Fatal(m.View())
+		}
+	}
+}
+
 func TestSelector(t *testing.T) {
 	count := 0
 	m := NewModel([]Profile{{"one", "One", "one@example.com", ""}, {"two", "Two", "two@example.com", "work"}}, "one", func(Profile) (string, error) { count++; return "Activated", nil })
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = next.(Model)
 	if !strings.Contains(m.View(), "[active]") || !strings.Contains(m.View(), "one@example.com") {
 		t.Fatal(m.View())
 	}
-	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	next, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	m = next.(Model)
 	if m.cursor != 1 {
 		t.Fatal("navigation")

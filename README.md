@@ -10,11 +10,13 @@ Requirements: Go 1.23 or newer, Git on `PATH`, and an interactive terminal. From
 go run ./cmd/gitvm-tui
 ```
 
-Choose a profile, press **Enter** to select it, then **Enter** again to activate it. Merely opening or navigating the selector does not change your identity.
+GitVM opens in a clean alternate terminal screen and restores your shell when you exit. Its action menu provides **Switch profile**, **Create profile**, and **Delete profile**. Use **↑/↓** or **j/k** to focus an action and **Enter** to choose it; focus, active profiles, destructive actions, successes, and errors have both textual and colour cues.
 
-Press **n** in the selector to create a profile. Enter a profile ID, Git author name, email, and optional SSH alias. Use **Tab/Shift+Tab** or **↑/↓** to change fields. **Enter** advances to the next field and saves from the alias field; **Backspace** erases the last character. **Esc/Ctrl+C** cancels without saving. Letters such as `q`, `j`, and `k` are ordinary text inside the form.
+To switch, choose **Switch profile**, select a profile, press **Enter**, then press **Enter** again to confirm activation. Merely opening or navigating any view does not change your identity.
 
-Validation and storage errors remain visible in the form so you can correct or cancel. Existing IDs are rejected without overwrite. Successful creation returns to the selector with the new profile selected, but does not activate it or change Git, SSH, or the current-profile marker.
+Choose **Create profile** (or press **n** from the action menu) to enter a profile ID, Git author name, email, and optional SSH alias. Use **Tab/Shift+Tab** or **↑/↓** to change fields. **Enter** advances to the next field and saves from the alias field; **Backspace** erases the last character. **Esc/Ctrl+C** cancels without saving. Letters such as `q`, `j`, and `k` are ordinary text inside the form.
+
+Choose **Delete profile** to select a stored profile. Deletion requires a second **Enter** confirmation and **Esc**, **q**, or **Ctrl+C** cancels it. The active profile is protected: switch to another profile before deleting it. Validation and storage errors remain visible so you can correct, cancel, or retry. Existing IDs are rejected without overwrite. Successful creation returns to the action menu with the new profile selected, but does not activate it or change Git, SSH, or the current-profile marker.
 
 This creates profile metadata, not an SSH key. Existing SSH keys are optional for activation; see the safety behavior below.
 
@@ -64,10 +66,12 @@ Only regular files with valid fields and two or three lines are loaded; malforme
 
 | Key | Action |
 | --- | --- |
-| `↑` / `k`, `↓` / `j` | Move through profiles |
-| `Enter` | Select, then press again to confirm activation |
-| `n` | Open the create-profile form |
-| `Esc`, `q`, `Ctrl+C` | Cancel a pending confirmation; otherwise quit |
+| `↑` / `k`, `↓` / `j` | Move through menu actions and profiles |
+| `Enter` | Choose the focused action or profile; press again to confirm activation or deletion |
+| `n` | Open the create-profile form from the action menu |
+| `Tab` / `Shift+Tab`, `↑` / `↓` | Move between create-profile form fields |
+| `Esc` / `Ctrl+C` | Cancel a form or confirmation; return to the action menu; quit from the menu |
+| `q` | Return to the action menu or quit from it; ordinary text in the create form |
 
 Input is ignored while activation or profile creation is running. Success and failure messages appear in the interface.
 
@@ -107,7 +111,7 @@ These precedence rejections happen **before Git, SSH, or the current marker is c
 
 ## Scope and non-goals
 
-The TUI creates and lists profiles, shows the saved active selection, and activates a confirmed selection. It does not edit or delete profiles; clone repositories; generate SSH keys; authenticate with GitHub; or manage per-repository identities.
+The TUI creates, lists, safely deletes inactive profiles, shows the saved active selection, and activates a confirmed selection. It does not edit profiles, delete the active profile, clone repositories, generate SSH keys, authenticate with GitHub, or manage per-repository identities.
 
 ## Tests
 
