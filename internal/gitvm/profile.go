@@ -110,6 +110,52 @@ func Create(home string, p Profile) error {
 	return nil
 }
 
+// Delete removes a valid regular profile record. The caller owns active-profile
+// policy; this operation never changes the current marker.
+func Delete(home, id string) error {
+	if id == "" || id == "." || id == ".." || strings.ContainsAny(id, "/\\") || !clean(id) {
+		return fmt.Errorf("invalid profile ID %q", id)
+	}
+	dir := filepath.Join(home, ".gitvm", "profiles")
+	// Reject redirected storage as well as non-regular profile entries.
+	for _, path := range []string{filepath.Join(home, ".gitvm"), dir} {
+		info, err := os.Lstat(path)
+		if err != nil {
+			return fmt.Errorf("delete profile %q: %w", id, err)
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("delete profile %q: storage %q is not a directory", id, path)
+		}
+	}
+	path := filepath.Join(dir, id)
+	info, err := os.Lstat(path)
+	if err != nil {
+		return fmt.Errorf("delete profile %q: %w", id, err)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("delete profile %q: not a regular profile record", id)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read profile %q for deletion: %w", id, err)
+	}
+	lines := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+	if len(lines) < 2 || len(lines) > 3 {
+		return fmt.Errorf("invalid profile record %q", id)
+	}
+	p := Profile{ID: id, Name: lines[0], Email: lines[1]}
+	if len(lines) == 3 {
+		p.Alias = lines[2]
+	}
+	if err := p.Validate(); err != nil {
+		return fmt.Errorf("invalid profile record %q: %w", id, err)
+	}
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("delete profile %q: %w", id, err)
+	}
+	return nil
+}
+
 func RunGit(args ...string) error {
 	out, err := exec.Command("git", args...).CombinedOutput()
 	if err != nil {
