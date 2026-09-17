@@ -191,7 +191,7 @@ func TestCreationForm(t *testing.T) {
 	}
 	text("discard")
 	key(tea.KeyMsg{Type: tea.KeyEsc})
-	if strings.Contains(m.View(), "Create profile") {
+	if strings.Contains(m.View(), "Profile ID:") {
 		t.Fatal("cancel failed")
 	}
 	text("n")
@@ -234,6 +234,53 @@ func TestCreationForm(t *testing.T) {
 	m = next.(Model)
 	if !strings.Contains(m.View(), "already exists") || !strings.Contains(m.View(), "Create profile") || len(m.profiles) != 1 {
 		t.Fatal(m.View())
+	}
+}
+
+func TestSwitchSelectionRetainsCreatedProfile(t *testing.T) {
+	prior := Profile{"old", "Old", "old@example.com", ""}
+	created := Profile{"new", "New", "new@example.com", ""}
+	m := NewModel([]Profile{prior}, prior.ID, func(Profile) (string, error) {
+		t.Fatal("navigation activated a profile")
+		return "", nil
+	}).WithCreator(func(Profile) error {
+		t.Fatal("navigation created a profile")
+		return nil
+	}).WithDeleter(func(string) error {
+		t.Fatal("navigation deleted a profile")
+		return nil
+	})
+	update := func(msg tea.Msg) {
+		t.Helper()
+		next, cmd := m.Update(msg)
+		m = next.(Model)
+		if cmd != nil || m.current != prior.ID {
+			t.Fatal("navigation crossed a mutation boundary")
+		}
+	}
+	update(tea.KeyMsg{Type: tea.KeyEnter})
+	if m.state != switchSelection || m.cursor != 0 {
+		t.Fatal("first selection must start at the first profile")
+	}
+	update(tea.KeyMsg{Type: tea.KeyEsc})
+	update(tea.KeyMsg{Type: tea.KeyDown})
+	update(tea.KeyMsg{Type: tea.KeyEnter})
+	update(creationResult{profile: created})
+	if m.state != actionMenu || m.action != 1 || m.cursor != 1 {
+		t.Fatal("creation must return to actions with the new profile selected")
+	}
+	update(tea.KeyMsg{Type: tea.KeyUp})
+	update(tea.KeyMsg{Type: tea.KeyEnter})
+	if m.state != switchSelection || m.cursor != 1 || !strings.Contains(m.View(), "> new") {
+		t.Fatalf("Switch profile lost the created profile selection: %s", m.View())
+	}
+	update(tea.KeyMsg{Type: tea.KeyUp})
+	if m.cursor != 0 {
+		t.Fatal("profile navigation did not move up")
+	}
+	update(tea.KeyMsg{Type: tea.KeyDown})
+	if m.cursor != 1 {
+		t.Fatal("profile navigation did not move down")
 	}
 }
 
