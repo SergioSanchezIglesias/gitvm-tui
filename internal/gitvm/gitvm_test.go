@@ -83,6 +83,103 @@ func TestCreateProfile(t *testing.T) {
 	}
 }
 
+func TestDeleteProfile(t *testing.T) {
+	for _, alias := range []string{"", "Work"} {
+		t.Run("alias="+alias, func(t *testing.T) {
+			h := t.TempDir()
+			if err := Create(h, Profile{"chosen", "Name", "a@example.com", alias}); err != nil {
+				t.Fatal(err)
+			}
+			fixture(t, h, ".gitvm/profiles/keep", "Keep\nkeep@example.com\n")
+			fixture(t, h, ".gitvm/current", "chosen\n")
+			if err := Delete(h, "chosen"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Lstat(filepath.Join(h, ".gitvm/profiles/chosen")); !os.IsNotExist(err) {
+				t.Fatalf("profile remains: %v", err)
+			}
+			for path, want := range map[string]string{".gitvm/current": "chosen\n", ".gitvm/profiles/keep": "Keep\nkeep@example.com\n"} {
+				data, err := os.ReadFile(filepath.Join(h, path))
+				if err != nil || string(data) != want {
+					t.Fatalf("changed %s: %q, %v", path, data, err)
+				}
+			}
+			if err := Delete(h, "chosen"); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("missing profile error: %v", err)
+			}
+		})
+	}
+	for _, id := range []string{"", ".", "..", "../outside", "a/b", `a\b`, "/absolute", " padded", "line\nfeed", "nul\x00"} {
+		t.Run("invalid ID="+id, func(t *testing.T) {
+			if err := Delete(t.TempDir(), id); err == nil || !strings.Contains(err.Error(), "invalid profile ID") {
+				t.Fatalf("invalid ID error: %v", err)
+			}
+		})
+	}
+	for _, data := range []string{"", "Name\n", "Name\nbad\n", "Name\na@example.com\nbad alias\n", "Name\na@example.com\nWork\nextra\n"} {
+		t.Run("invalid record="+data, func(t *testing.T) {
+			h := t.TempDir()
+			fixture(t, h, ".gitvm/profiles/bad", data)
+			if err := Delete(h, "bad"); err == nil || !strings.Contains(err.Error(), "invalid profile record") {
+				t.Fatalf("invalid record error: %v", err)
+			}
+			got, err := os.ReadFile(filepath.Join(h, ".gitvm/profiles/bad"))
+			if err != nil || string(got) != data {
+				t.Fatal("invalid record changed", err)
+			}
+		})
+	}
+	for _, kind := range []string{"directory", "symlink", "dangling symlink", "profiles symlink", "storage symlink"} {
+		t.Run(kind, func(t *testing.T) {
+			h := t.TempDir()
+			outside := t.TempDir()
+			fixture(t, outside, "profiles/target", "Name\na@example.com\n")
+			path := filepath.Join(h, ".gitvm/profiles/target")
+			if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+				t.Fatal(err)
+			}
+			switch kind {
+			case "directory":
+				if err := os.Mkdir(path, 0700); err != nil {
+					t.Fatal(err)
+				}
+			case "symlink", "dangling symlink":
+				target := filepath.Join(outside, "profiles/target")
+				if kind == "dangling symlink" {
+					target += "-missing"
+				}
+				if err := os.Symlink(target, path); err != nil {
+					t.Fatal(err)
+				}
+			default:
+				h = t.TempDir()
+				path = filepath.Join(h, ".gitvm")
+				target := outside
+				if kind == "profiles symlink" {
+					if err := os.Mkdir(path, 0700); err != nil {
+						t.Fatal(err)
+					}
+					path = filepath.Join(path, "profiles")
+					target = filepath.Join(outside, "profiles")
+				}
+				if err := os.Symlink(target, path); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := Delete(h, "target"); err == nil {
+				t.Fatal("non-regular storage accepted")
+			}
+			if _, err := os.Lstat(path); err != nil {
+				t.Fatal("entry removed", err)
+			}
+			data, err := os.ReadFile(filepath.Join(outside, "profiles/target"))
+			if err != nil || string(data) != "Name\na@example.com\n" {
+				t.Fatal("outside record changed", err)
+			}
+		})
+	}
+}
+
 func TestCreationForm(t *testing.T) {
 	h := t.TempDir()
 	m := NewModel(nil, "old", func(Profile) (string, error) { t.Fatal("creation activated profile"); return "", nil }).WithCreator(func(p Profile) error { return Create(h, p) })
