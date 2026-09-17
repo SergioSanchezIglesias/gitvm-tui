@@ -17,7 +17,7 @@ Publish the completed GitVM TUI as the public repository `SergioSanchezIglesias/
 
 ## Tasks
 - [x] PUB-1 Add README, MIT license, and ignore rule for the local executable. (README, MIT license, and root executable ignore rule added; tests passed.)
-- [ ] PUB-2 Initialize Git, create the public repository, commit the initial project, and push `main`.
+- [x] PUB-2 Initialize Git, create the public repository, commit the initial project, and push `main`. (Published as commit `30171df`.)
 
 ## Acceptance criteria
 - `README.md` accurately explains installation, usage, legacy storage compatibility, and SSH safety behavior.
@@ -32,7 +32,7 @@ Publish the completed GitVM TUI as the public repository `SergioSanchezIglesias/
 
 ## Progress
 - PUB-1 complete: public README, MIT license, and root-only `gitvm-tui` ignore rule added. `go test ./... -count=1` passed.
-- PUB-2 in progress: initialize and publish the reviewed project.
+- PUB-2 complete: initialized `main`, committed the reviewed project as `30171df feat: publish GitVM TUI`, created `SergioSanchezIglesias/gitvm-tui` publicly, and pushed `origin/main`.
 
 ## Next step
-Initialize Git, inspect the staged file list, commit the reviewed project, create the public GitHub repository, push `main`, and verify the remote.
+Completed. The public repository is available at `https://github.com/SergioSanchezIglesias/gitvm-tui`.
