@@ -1,6 +1,6 @@
 # GitVM TUI
 
-A small terminal interface for selecting and activating existing GitVM account profiles. Built with Go and Bubble Tea, it reads the legacy `gitvm` profile files without migration.
+A small terminal interface for creating, selecting, and activating GitVM account profiles. Built with Go and Bubble Tea, it uses a simple local profile format without migration.
 
 ## Quick start
 
@@ -12,11 +12,9 @@ go run ./cmd/gitvm-tui
 
 Choose a profile, press **Enter** to select it, then **Enter** again to activate it. Merely opening or navigating the selector does not change your identity.
 
-If you have no profiles, create one with the included legacy script before starting the TUI:
+Press **n** in the selector to create a profile. Enter a profile ID, Git author name, email, and optional SSH alias. Use **Tab/Shift+Tab** or **↑/↓** to change fields. **Enter** advances to the next field and saves from the alias field; **Backspace** erases the last character. **Esc/Ctrl+C** cancels without saving. Letters such as `q`, `j`, and `k` are ordinary text inside the form.
 
-```sh
-bash ./gitvm add "Example User" user@example.com personal
-```
+Validation and storage errors remain visible in the form so you can correct or cancel. Existing IDs are rejected without overwrite. Successful creation returns to the selector with the new profile selected, but does not activate it or change Git, SSH, or the current-profile marker.
 
 This creates profile metadata, not an SSH key. Existing SSH keys are optional for activation; see the safety behavior below.
 
@@ -37,7 +35,7 @@ go install ./cmd/gitvm-tui
 
 The installed executable goes to `GOBIN`, or `$(go env GOPATH)/bin` when `GOBIN` is unset. Add that directory to `PATH` to run `gitvm-tui` anywhere.
 
-## Legacy profile storage
+## Profile storage
 
 The TUI uses the current user's home directory:
 
@@ -58,6 +56,8 @@ personal
 
 The lines are Git author name, email address, and optional SSH alias. The alias may contain only ASCII letters, digits, underscores, and hyphens. Names and emails must not contain control characters or surrounding whitespace; the email must parse as a bare address. Profile IDs must be safe single filenames.
 
+Creation writes a complete record with mode `0600` and publishes it atomically without overwriting an existing entry. New storage directories use mode `0700`; permissions of existing directories are unchanged. Publication requires filesystem hard-link support. Records without an alias contain only two lines.
+
 Only regular files with valid fields and two or three lines are loaded; malformed profiles and non-regular entries are skipped. A missing profiles directory produces an empty selector. Other read errors can prevent startup. The `[active]` marker comes from `~/.gitvm/current`, not a live check of Git or GitHub authentication.
 
 ## Controls
@@ -66,9 +66,10 @@ Only regular files with valid fields and two or three lines are loaded; malforme
 | --- | --- |
 | `↑` / `k`, `↓` / `j` | Move through profiles |
 | `Enter` | Select, then press again to confirm activation |
+| `n` | Open the create-profile form |
 | `Esc`, `q`, `Ctrl+C` | Cancel a pending confirmation; otherwise quit |
 
-Input is ignored while activation is running. Success and failure messages appear in the interface.
+Input is ignored while activation or profile creation is running. Success and failure messages appear in the interface.
 
 ## What activation changes
 
@@ -106,9 +107,7 @@ These precedence rejections happen **before Git, SSH, or the current marker is c
 
 ## Scope and non-goals
 
-The TUI lists existing profiles, shows the saved active selection, and activates a confirmed selection. It does not add, edit, or delete profiles; clone repositories; generate SSH keys; authenticate with GitHub; or manage per-repository identities.
-
-The included Bash `gitvm` script remains a separate legacy tool with broader commands. Its behavior and safety guarantees differ: notably, `setup` replaces SSH configuration after making a backup, and legacy switching may invoke `gh`. The TUI's SSH preservation and rejection rules do not apply to that script.
+The TUI creates and lists profiles, shows the saved active selection, and activates a confirmed selection. It does not edit or delete profiles; clone repositories; generate SSH keys; authenticate with GitHub; or manage per-repository identities.
 
 ## Tests
 
@@ -118,7 +117,7 @@ Run the full Go test suite from the source directory:
 go test ./... -count=1
 ```
 
-The tests use temporary home directories and injected Git runners to exercise profile loading, selection, activation, and SSH safety without changing your real Git or SSH configuration.
+The tests use temporary home directories and injected Git runners to exercise profile creation, loading, form navigation, selection, activation, and SSH safety without changing your real Git or SSH configuration.
 
 ## License
 

@@ -67,6 +67,49 @@ func Load(home string) ([]Profile, string, error) {
 	}
 	return profiles, strings.TrimSuffix(string(current), "\n"), nil
 }
+
+// Create publishes a complete private record without replacing any existing entry.
+func Create(home string, p Profile) error {
+	if err := p.Validate(); err != nil {
+		return err
+	}
+	dir := filepath.Join(home, ".gitvm", "profiles")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return err
+	}
+	f, err := os.CreateTemp(dir, ".gitvm-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	data := p.Name + "\n" + p.Email + "\n"
+	if p.Alias != "" {
+		data += p.Alias + "\n"
+	}
+	if err = f.Chmod(0600); err == nil {
+		_, err = f.WriteString(data)
+	}
+	if err == nil {
+		err = f.Sync()
+	}
+	closeErr := f.Close()
+	if err != nil {
+		return err
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	// A same-directory hard link atomically publishes the flushed inode and
+	// fails if the destination exists, including a directory or symlink.
+	if err := os.Link(f.Name(), filepath.Join(dir, p.ID)); err != nil {
+		if os.IsExist(err) {
+			return fmt.Errorf("profile %q already exists", p.ID)
+		}
+		return err
+	}
+	return nil
+}
+
 func RunGit(args ...string) error {
 	out, err := exec.Command("git", args...).CombinedOutput()
 	if err != nil {

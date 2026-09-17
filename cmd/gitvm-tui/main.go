@@ -18,7 +18,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Load profiles:", err)
 		os.Exit(1)
 	}
-	model := gitvm.NewModel(profiles, current, func(p gitvm.Profile) (string, error) { return gitvm.Activate(home, p, gitvm.RunGit) })
+	model := gitvm.NewModel(profiles, current, func(p gitvm.Profile) (string, error) { return gitvm.Activate(home, p, gitvm.RunGit) }).WithCreator(func(p gitvm.Profile) error { return gitvm.Create(home, p) })
 	if _, err := tea.NewProgram(model).Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

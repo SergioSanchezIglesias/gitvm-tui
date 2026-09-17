@@ -19,6 +19,127 @@ func fixture(t *testing.T, home, path, data string) {
 		t.Fatal(err)
 	}
 }
+func TestCreateProfile(t *testing.T) {
+	for _, alias := range []string{"", "work"} {
+		t.Run("alias="+alias, func(t *testing.T) {
+			h := t.TempDir()
+			p := Profile{"new", "New User", "new@example.com", alias}
+			if err := Create(h, p); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(h, ".gitvm/profiles/new")
+			want := "New User\nnew@example.com\n"
+			if alias != "" {
+				want += alias + "\n"
+			}
+			data, err := os.ReadFile(path)
+			if err != nil || string(data) != want {
+				t.Fatalf("record %q: %v", data, err)
+			}
+			info, err := os.Stat(path)
+			if err != nil || info.Mode().Perm() != 0600 {
+				t.Fatal("profile must be private", err)
+			}
+			info, err = os.Stat(filepath.Dir(path))
+			if err != nil || info.Mode().Perm() != 0700 {
+				t.Fatal("directory must be private", err)
+			}
+			p.Name = "Replacement"
+			if err := Create(h, p); err == nil {
+				t.Fatal("duplicate accepted")
+			}
+			data, _ = os.ReadFile(path)
+			if string(data) != want {
+				t.Fatal("duplicate overwrote profile")
+			}
+			profiles, current, err := Load(h)
+			if err != nil || len(profiles) != 1 || current != "" {
+				t.Fatalf("load %v %q %v", profiles, current, err)
+			}
+			entries, _ := os.ReadDir(filepath.Dir(path))
+			if len(entries) != 1 {
+				t.Fatal("temporary file leaked")
+			}
+		})
+	}
+	for _, p := range []Profile{{"../bad", "Name", "a@example.com", ""}, {"bad", "Name\nInjected", "a@example.com", ""}, {"bad", "Name", "invalid", ""}, {"bad", "Name", "a@example.com", "bad alias"}} {
+		h := t.TempDir()
+		if err := Create(h, p); err == nil {
+			t.Fatalf("accepted %+v", p)
+		}
+		entries, _ := os.ReadDir(h)
+		if len(entries) != 0 {
+			t.Fatal("invalid input changed storage")
+		}
+	}
+	h := t.TempDir()
+	fixture(t, h, ".gitvm/profiles", "blocked")
+	if err := Create(h, Profile{"new", "Name", "a@example.com", ""}); err == nil {
+		t.Fatal("storage error hidden")
+	}
+	data, _ := os.ReadFile(filepath.Join(h, ".gitvm/profiles"))
+	if string(data) != "blocked" {
+		t.Fatal("storage changed")
+	}
+}
+
+func TestCreationForm(t *testing.T) {
+	h := t.TempDir()
+	m := NewModel(nil, "old", func(Profile) (string, error) { t.Fatal("creation activated profile"); return "", nil }).WithCreator(func(p Profile) error { return Create(h, p) })
+	key := func(k tea.KeyMsg) tea.Cmd { next, cmd := m.Update(k); m = next.(Model); return cmd }
+	text := func(s string) { key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}) }
+	text("n")
+	if !strings.Contains(m.View(), "Create profile") {
+		t.Fatal(m.View())
+	}
+	text("discard")
+	key(tea.KeyMsg{Type: tea.KeyEsc})
+	if strings.Contains(m.View(), "Create profile") {
+		t.Fatal("cancel failed")
+	}
+	text("n")
+	for _, s := range []string{"new", "Name qjk", "bad"} {
+		text(s)
+		key(tea.KeyMsg{Type: tea.KeyTab})
+	}
+	cmd := key(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil || !strings.Contains(m.View(), "invalid email") {
+		t.Fatal("validation missing", m.View())
+	}
+	key(tea.KeyMsg{Type: tea.KeyShiftTab})
+	for range "bad" {
+		key(tea.KeyMsg{Type: tea.KeyBackspace})
+	}
+	text("new@example.com")
+	key(tea.KeyMsg{Type: tea.KeyDown})
+	cmd = key(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("missing create command")
+	}
+	if c := key(tea.KeyMsg{Type: tea.KeyEnter}); c != nil {
+		t.Fatal("duplicate submit")
+	}
+	next, _ := m.Update(cmd())
+	m = next.(Model)
+	if len(m.profiles) != 1 || m.profiles[0].Name != "Name qjk" || m.current != "old" || !strings.Contains(m.View(), "Created new") {
+		t.Fatal(m.View())
+	}
+	text("n")
+	for _, s := range []string{"new", "Other", "other@example.com"} {
+		text(s)
+		key(tea.KeyMsg{Type: tea.KeyEnter})
+	}
+	cmd = key(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("missing duplicate attempt")
+	}
+	next, _ = m.Update(cmd())
+	m = next.(Model)
+	if !strings.Contains(m.View(), "already exists") || !strings.Contains(m.View(), "Create profile") || len(m.profiles) != 1 {
+		t.Fatal(m.View())
+	}
+}
+
 func TestProfiles(t *testing.T) {
 	h := t.TempDir()
 	fixture(t, h, ".gitvm/profiles/Person", "Person\nperson@example.com\nWork\n")
