@@ -1,0 +1,5 @@
+# Local Pi runtime state
+.atl/
+
+# Local executable (repository root only)
+/gitvm-tui
