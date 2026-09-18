@@ -37,6 +37,7 @@ Issue #2 requests recognizable startup branding while preserving terminal access
 - 2026-09-17: User rejected the initial box-and-bicycle banner and selected an original symmetrical-branches design with opposing arrows; SB-1 reopened.
 - 2026-09-17: The replacement passed strict TDD and independent verification. User authorized commit and PR creation; issue #2 lacked the repository-required `status:approved` label.
 - 2026-09-17: Added `status:approved` to issue #2 and committed SB-1 as `14f12b6`.
+- 2026-09-17: Pushed `feat/startup-banner`, opened PR #8 toward `main`, and applied its required `type:feature` label.
 
 ## Next step
-Push `feat/startup-banner` and open a feature PR toward `main`.
+Wait for PR #8 automated checks and human review.
