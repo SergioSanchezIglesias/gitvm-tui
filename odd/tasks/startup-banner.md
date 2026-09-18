@@ -21,21 +21,22 @@ Issue #2 requests recognizable startup branding while preserving terminal access
 ## Delivery
 - Strategy: ask-on-risk.
 - Forecast: under 100 authored changed lines.
-- Work-unit commit: user authorized commit and PR creation; pending issue-approval label required by repository PR policy.
+- Work-unit commit: `14f12b6 feat(tui): add GitVM startup banner`.
 
 ## Tasks
-- [ ] SB-1: Implement an accessible persistent GitVM banner, tests, and README documentation.
+- [x] SB-1: Implement an accessible persistent GitVM banner, tests, and README documentation.
   - Acceptance: Main menu includes an original banner with symmetrical Git branches and opposing arrows; menu remains immediately usable; rendering is deterministic and legible without colour.
   - Checks: RED observed: `go test ./... -count=1` exited 1 because `TestMainMenuBanner` did not find `<--o   o-->`. GREEN observed: the same command exited 0. Independent verification passed `go test ./... -count=1` and `git diff --check`.
   - Rollback boundary: Remove the banner helper, its render call, its focused assertion, and its README note.
-  - Status: Implementation and independent verification complete; awaiting the `status:approved` issue label required before PR creation.
+  - Status: Complete. Commit `14f12b6` contains the implementation, tests, documentation, and task record.
 
 ## Progress
 - 2026-09-17: User selected a persistent banner over a temporary splash screen.
 - 2026-09-17: User selected strict TDD for SB-1.
 - 2026-09-17: SB-1 implementation and independent verification passed. Native risk assessment was unavailable because the local Gentle AI binary is missing; an independent verifier was run instead.
 - 2026-09-17: User rejected the initial box-and-bicycle banner and selected an original symmetrical-branches design with opposing arrows; SB-1 reopened.
-- 2026-09-17: The replacement passed strict TDD and independent verification. User authorized commit and PR creation; issue #2 lacks the repository-required `status:approved` label.
+- 2026-09-17: The replacement passed strict TDD and independent verification. User authorized commit and PR creation; issue #2 lacked the repository-required `status:approved` label.
+- 2026-09-17: Added `status:approved` to issue #2 and committed SB-1 as `14f12b6`.
 
 ## Next step
-Obtain explicit authorization to add `status:approved` to issue #2, then commit, push, and open the PR.
+Push `feat/startup-banner` and open a feature PR toward `main`.
