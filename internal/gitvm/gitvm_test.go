@@ -3,6 +3,8 @@ package gitvm
 import (
 	"errors"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +21,44 @@ func fixture(t *testing.T, home, path, data string) {
 		t.Fatal(err)
 	}
 }
+func TestMainMenuBanner(t *testing.T) {
+	previous := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.Ascii)
+	t.Cleanup(func() { lipgloss.SetColorProfile(previous) })
+	for _, profiles := range [][]Profile{nil, {{"work", "Example User", "user@example.com", ""}}} {
+		m := NewModel(profiles, "", nil)
+		if m.Init() != nil {
+			t.Fatal("startup must not schedule a splash or delay")
+		}
+		view := m.View()
+		for _, text := range []string{"<--o   o-->", "   GitVM", `    \ /`, "     o", "Git profile manager", "> Switch profile", "Create profile", "Delete profile", "Enter: select"} {
+			if !strings.Contains(view, text) {
+				t.Fatalf("main menu missing %q:\n%s", text, view)
+			}
+		}
+		for _, state := range []screen{switchSelection, deleteSelection, activationConfirmation, deleteConfirmation, createForm} {
+			other := m
+			other.state = state
+			if strings.Contains(other.View(), "<--o   o-->") {
+				t.Fatalf("banner must not appear on screen %d", state)
+			}
+		}
+		if strings.Contains(view, "\x1b") || view != m.View() {
+			t.Fatal("plain menu must be deterministic and free of ANSI escapes")
+		}
+		next, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+		m = next.(Model)
+		if cmd != nil || m.state != switchSelection || strings.Contains(m.View(), "<--o   o-->") {
+			t.Fatal("Enter must immediately open selection without the menu banner")
+		}
+		next, cmd = m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+		m = next.(Model)
+		if cmd != nil || m.state != actionMenu || m.View() != view {
+			t.Fatal("returning to the menu must restore the same persistent banner")
+		}
+	}
+}
+
 func TestCreateProfile(t *testing.T) {
 	for _, alias := range []string{"", "work"} {
 		t.Run("alias="+alias, func(t *testing.T) {

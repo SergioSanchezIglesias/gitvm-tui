@@ -244,6 +244,9 @@ func focused(text string, focus bool) string {
 }
 func (m Model) View() string {
 	var out strings.Builder
+	if m.state == actionMenu {
+		out.WriteString("   GitVM\n<--o   o-->\n    \\ /\n     o\nGit profile manager\n\n")
+	}
 	titles := []string{"Profiles", "Switch profile", "Delete profile", "Switch profile", "Delete profile", "Create profile"}
 	out.WriteString(focusStyle.Render("GitVM — "+titles[m.state]) + "\n\n")
 	hints := "↑/↓ or j/k: navigate • Enter: select • Esc/q/Ctrl+C: back"
