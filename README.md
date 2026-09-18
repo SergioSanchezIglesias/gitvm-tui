@@ -12,6 +12,8 @@ go run ./cmd/gitvm-tui
 
 GitVM opens in a clean alternate terminal screen and restores your shell when you exit. Its action menu provides **Switch profile**, **Create profile**, and **Delete profile**. Use **↑/↓** or **j/k** to focus an action and **Enter** to choose it; focus, active profiles, destructive actions, successes, and errors have both textual and colour cues.
 
+The action menu includes an original ASCII GitVM banner that stays visible while choosing an action and reappears when you return. It is readable without colour and adds no splash screen, delay, or extra keypress.
+
 To switch, choose **Switch profile**, select a profile, press **Enter**, then press **Enter** again to confirm activation. Merely opening or navigating any view does not change your identity.
 
 Choose **Create profile** (or press **n** from the action menu) to enter a profile ID, Git author name, email, and optional SSH alias. Use **Tab/Shift+Tab** or **↑/↓** to change fields. **Enter** advances to the next field and saves from the alias field; **Backspace** erases the last character. **Esc/Ctrl+C** cancels without saving. Letters such as `q`, `j`, and `k` are ordinary text inside the form.
