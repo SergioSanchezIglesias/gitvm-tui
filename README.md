@@ -70,6 +70,26 @@ Activation failures report an error on stderr and exit with status `1`. Activati
 is not a transaction: earlier changes may remain applied after a later failure;
 there is no whole-operation rollback.
 
+## List profiles
+
+Run `gitvm-tui --list` or `gitvm-tui -l` to print valid stored profiles without
+opening the TUI or changing Git, SSH, profiles, or the current marker:
+
+```text
+  personal    Personal User    personal@example.com
+* work        Work User        work@example.com
+```
+
+Each line contains the profile ID, name, and email, separated by tabs. `*` marks
+the saved active profile from `~/.gitvm/current`, not a live Git identity check.
+Profiles are listed in filename order; malformed records are skipped, just as in
+the TUI. A missing or empty profiles directory prints `No profiles found.`.
+If the saved active ID is missing, no profile is marked.
+
+The option must be used alone. Listing succeeds with exit status `0`, including
+an empty list; extra arguments and storage failures report errors on stderr and
+exit with status `1`.
+
 ## Profile storage
 
 The TUI uses the current user's home directory:

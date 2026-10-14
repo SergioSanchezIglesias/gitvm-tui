@@ -13,11 +13,16 @@ const usage = `Usage:
   gitvm-tui
   gitvm-tui --user <profile-id>
   gitvm-tui -u <profile-id>
+  gitvm-tui --list | -l
   gitvm-tui --help | -h
 
 Options:
   --user, -u <profile-id>  Activate an existing profile by its exact stored ID.
+  --list, -l              List profile IDs, names and emails; * marks the saved active ID.
   --help, -h              Show this help and exit without changes.
+
+List and help must be used alone and never change state.
+An empty list prints "No profiles found." and exits successfully.
 
 Without arguments, opens the interactive TUI. Profile activation requires no
 terminal or confirmation. It changes global Git name/email defaults and the
@@ -45,6 +50,7 @@ func run(args []string, stdout, stderr io.Writer, userHome func() (string, error
 		return 1
 	}
 	var id string
+	list := false
 	if len(args) > 0 {
 		switch args[0] {
 		case "--help", "-h":
@@ -53,6 +59,11 @@ func run(args []string, stdout, stderr io.Writer, userHome func() (string, error
 			}
 			fmt.Fprint(stdout, usage)
 			return 0
+		case "--list", "-l":
+			if len(args) != 1 {
+				return argumentError(args[0] + " must be used alone")
+			}
+			list = true
 		case "--user", "-u":
 			if len(args) < 2 {
 				return argumentError(args[0] + " requires a profile ID")
@@ -78,6 +89,19 @@ func run(args []string, stdout, stderr io.Writer, userHome func() (string, error
 	if err != nil {
 		fmt.Fprintln(stderr, "Load profiles:", err)
 		return 1
+	}
+	if list {
+		if len(profiles) == 0 {
+			fmt.Fprintln(stdout, "No profiles found.")
+		}
+		for _, profile := range profiles {
+			marker := " "
+			if profile.ID == current {
+				marker = "*"
+			}
+			fmt.Fprintf(stdout, "%s %s\t%s\t%s\n", marker, profile.ID, profile.Name, profile.Email)
+		}
+		return 0
 	}
 	if len(args) > 0 {
 		for _, profile := range profiles {
