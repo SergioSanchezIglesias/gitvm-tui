@@ -39,6 +39,37 @@ go install ./cmd/gitvm-tui
 
 The installed executable goes to `GOBIN`, or `$(go env GOPATH)/bin` when `GOBIN` is unset. Add that directory to `PATH` to run `gitvm-tui` anywhere.
 
+## Command-line activation
+
+Activate an existing profile without opening the TUI or asking for confirmation:
+
+```sh
+gitvm-tui --user personal
+# Short form:
+gitvm-tui -u personal
+# From the source checkout:
+go run ./cmd/gitvm-tui --user personal
+```
+
+`personal` is the exact, case-sensitive stored **profile ID** (the filename under
+`~/.gitvm/profiles`), not a Git author name, email, or GitHub account. Create the
+profile in the TUI first. Activation needs no interactive terminal. Running
+`gitvm-tui` without arguments still opens the TUI.
+
+Use `gitvm-tui --help` or `gitvm-tui -h` for usage without changing anything.
+The user option takes exactly one ID as a separate argument; help must be used
+alone. Unknown options, extra arguments, missing/invalid IDs, and unknown profiles
+produce an error on stderr and exit with status `1`, without modifying state.
+Success prints the activation result (including whether SSH stayed unchanged)
+and exits with status `0`; help also exits with `0`.
+
+This uses the same activation as the TUI: **global Git name/email defaults**, the
+current-profile marker, and SSH only under the existing safety rules below.
+Repository-local Git settings and GitHub CLI authentication are not changed.
+Activation failures report an error on stderr and exit with status `1`. Activation
+is not a transaction: earlier changes may remain applied after a later failure;
+there is no whole-operation rollback.
+
 ## Profile storage
 
 The TUI uses the current user's home directory:
