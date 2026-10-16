@@ -57,6 +57,12 @@ profile in the TUI first. Activation needs no interactive terminal. Running
 `gitvm-tui` without arguments still opens the TUI.
 
 Use `gitvm-tui --help` or `gitvm-tui -h` for usage without changing anything.
+Help and list output use colors on supported terminals: cyan headings and commands,
+yellow options and email addresses, bold profile names, and green for the saved
+active profile. Text and the `*` marker remain readable without color. Set
+`NO_COLOR=1` to disable styling. Redirected output, `TERM=dumb`, and an unset or
+empty `TERM` always produce plain text, preserving tab-separated list fields.
+
 The user option takes exactly one ID as a separate argument; help must be used
 alone. Unknown options, extra arguments, missing/invalid IDs, and unknown profiles
 produce an error on stderr and exit with status `1`, without modifying state.

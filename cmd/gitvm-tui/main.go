@@ -23,6 +23,8 @@ Options:
 
 List and help must be used alone and never change state.
 An empty list prints "No profiles found." and exits successfully.
+Help and list use colors on supported terminals; set NO_COLOR=1 to disable.
+Redirected output and dumb or unset TERM remain plain text.
 
 Without arguments, opens the interactive TUI. Profile activation requires no
 terminal or confirmation. It changes global Git name/email defaults and the
@@ -44,6 +46,10 @@ func main() {
 // run keeps process, Git, and terminal boundaries injectable without changing
 // the profile validation or activation shared with the TUI.
 func run(args []string, stdout, stderr io.Writer, userHome func() (string, error), runGit func(...string) error, openTUI func(gitvm.Model) error) int {
+	return runCLI(args, stdout, stderr, userHome, runGit, openTUI, colorOutput(stdout))
+}
+
+func runCLI(args []string, stdout, stderr io.Writer, userHome func() (string, error), runGit func(...string) error, openTUI func(gitvm.Model) error, color bool) int {
 	argumentError := func(message string) int {
 		fmt.Fprintln(stderr, "Error: "+message)
 		fmt.Fprintln(stderr, "Run gitvm-tui --help for usage.")
@@ -57,7 +63,7 @@ func run(args []string, stdout, stderr io.Writer, userHome func() (string, error
 			if len(args) != 1 {
 				return argumentError(args[0] + " must be used alone")
 			}
-			fmt.Fprint(stdout, usage)
+			fmt.Fprint(stdout, renderHelp(color))
 			return 0
 		case "--list", "-l":
 			if len(args) != 1 {
@@ -99,7 +105,7 @@ func run(args []string, stdout, stderr io.Writer, userHome func() (string, error
 			if profile.ID == current {
 				marker = "*"
 			}
-			fmt.Fprintf(stdout, "%s %s\t%s\t%s\n", marker, profile.ID, profile.Name, profile.Email)
+			fmt.Fprint(stdout, renderProfile(marker, profile.ID, profile.Name, profile.Email, color))
 		}
 		return 0
 	}
