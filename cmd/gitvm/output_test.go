@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SergioSanchezIglesias/gitvm-tui/internal/gitvm"
 	"github.com/charmbracelet/x/ansi"
-	"gitvm/internal/gitvm"
 )
 
 func TestColoredOutput(t *testing.T) {
@@ -36,7 +36,7 @@ func TestColoredOutput(t *testing.T) {
 				t.Fatalf("plain=%q colored=%q stderr=%q", plain.String(), colored.String(), stderr.String())
 			}
 			if strings.Contains(flag, "h") {
-				for _, token := range []string{"\x1b[1;36mUsage:", "\x1b[36mgitvm-tui", "\x1b[33m--help"} {
+				for _, token := range []string{"\x1b[1;36mUsage:", "\x1b[36mgitvm", "\x1b[33m--help"} {
 					if !strings.Contains(colored.String(), token) {
 						t.Errorf("missing style %q", token)
 					}

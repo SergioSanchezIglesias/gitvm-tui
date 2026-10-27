@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"gitvm/internal/gitvm"
+	"github.com/SergioSanchezIglesias/gitvm-tui/internal/gitvm"
 )
 
 func TestRunList(t *testing.T) {
@@ -35,7 +35,7 @@ func TestRunList(t *testing.T) {
 					args = append(args, "--user", "personal")
 					wantCode = 1
 					wantOut = ""
-					wantErr = "Error: " + flag + " must be used alone\nRun gitvm-tui --help for usage.\n"
+					wantErr = "Error: " + flag + " must be used alone\nRun gitvm --help for usage.\n"
 				}
 				put(t, home, ".gitconfig", "original Git config\n")
 				put(t, home, ".ssh/config", "original SSH config\n")

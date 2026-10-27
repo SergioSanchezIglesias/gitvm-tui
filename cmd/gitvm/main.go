@@ -5,16 +5,16 @@ import (
 	"io"
 	"os"
 
+	"github.com/SergioSanchezIglesias/gitvm-tui/internal/gitvm"
 	tea "github.com/charmbracelet/bubbletea"
-	"gitvm/internal/gitvm"
 )
 
 const usage = `Usage:
-  gitvm-tui
-  gitvm-tui --user <profile-id>
-  gitvm-tui -u <profile-id>
-  gitvm-tui --list | -l
-  gitvm-tui --help | -h
+  gitvm
+  gitvm --user <profile-id>
+  gitvm -u <profile-id>
+  gitvm --list | -l
+  gitvm --help | -h
 
 Options:
   --user, -u <profile-id>  Activate an existing profile by its exact stored ID.
@@ -33,7 +33,7 @@ Repository-local Git settings and GitHub CLI authentication are not changed.
 Activation is not a transaction: a later failure may leave earlier changes applied.
 Exit status: 0 on success or help; 1 on invalid input or runtime failure.
 
-Example: gitvm-tui --user personal
+Example: gitvm --user personal
 `
 
 func main() {
@@ -52,7 +52,7 @@ func run(args []string, stdout, stderr io.Writer, userHome func() (string, error
 func runCLI(args []string, stdout, stderr io.Writer, userHome func() (string, error), runGit func(...string) error, openTUI func(gitvm.Model) error, color bool) int {
 	argumentError := func(message string) int {
 		fmt.Fprintln(stderr, "Error: "+message)
-		fmt.Fprintln(stderr, "Run gitvm-tui --help for usage.")
+		fmt.Fprintln(stderr, "Run gitvm --help for usage.")
 		return 1
 	}
 	var id string

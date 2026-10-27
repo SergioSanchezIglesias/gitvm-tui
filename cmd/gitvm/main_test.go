@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"gitvm/internal/gitvm"
+	"github.com/SergioSanchezIglesias/gitvm-tui/internal/gitvm"
 )
 
 func put(t *testing.T, home, path, data string) {
@@ -91,7 +91,7 @@ func TestRunRejectedArguments(t *testing.T) {
 			before := snapshot(t, home)
 			var out, stderr bytes.Buffer
 			code := run(tc.args, &out, &stderr, func() (string, error) { return home, nil }, func(...string) error { t.Fatal("rejected input ran Git"); return nil }, func(gitvm.Model) error { t.Fatal("rejected input opened TUI"); return nil })
-			wantErr := "Error: " + tc.message + "\nRun gitvm-tui --help for usage.\n"
+			wantErr := "Error: " + tc.message + "\nRun gitvm --help for usage.\n"
 			if code != 1 || out.String() != "" || stderr.String() != wantErr {
 				t.Fatalf("code=%d stdout=%q stderr=%q; want %q", code, out.String(), stderr.String(), wantErr)
 			}

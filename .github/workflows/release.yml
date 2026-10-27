@@ -1,0 +1,89 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Check stable release tag and tests
+        run: |
+          python3 - <<'PY'
+          import os
+          from scripts.homebrew import validate_tag
+          validate_tag(os.environ["GITHUB_REF_NAME"])
+          PY
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+          go test ./... -count=1
+          go vet ./...
+      # goreleaser-action v6
+      - uses: >-
+          goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a
+        with:
+          version: v2.19.0
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate Homebrew formula
+        run: |
+          python3 scripts/homebrew.py "$GITHUB_REF_NAME" \
+            dist/checksums.txt > dist/gitvm.rb
+      # upload-artifact v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: homebrew-formula
+          path: dist/gitvm.rb
+          if-no-files-found: error
+  homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check tap credential
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "::error::Set HOMEBREW_TAP_TOKEN (tap Contents read/write)."
+            echo "Then rerun this failed job; the release is already published."
+            exit 1
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: SergioSanchezIglesias/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+          persist-credentials: false
+      # download-artifact v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: homebrew-formula
+          path: tap/Formula
+      - name: Update tap
+        working-directory: tap
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          gh auth setup-git
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/gitvm.rb
+          if ! git diff --cached --quiet; then
+            git commit -m "Update gitvm to $GITHUB_REF_NAME"
+            git push
+          fi

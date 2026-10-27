@@ -1,4 +1,4 @@
-module gitvm
+module github.com/SergioSanchezIglesias/gitvm-tui
 
 go 1.23.0
 
