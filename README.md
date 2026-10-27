@@ -7,7 +7,7 @@ A small terminal interface for creating, selecting, and activating GitVM account
 Requirements: Go 1.23 or newer, Git on `PATH`, and an interactive terminal. From this source directory:
 
 ```sh
-go run ./cmd/gitvm-tui
+go run ./cmd/gitvm
 ```
 
 GitVM opens in a clean alternate terminal screen and restores your shell when you exit. Its action menu provides **Switch profile**, **Create profile**, and **Delete profile**. Use **↑/↓** or **j/k** to focus an action and **Enter** to choose it; focus, active profiles, destructive actions, successes, and errors have both textual and colour cues.
@@ -22,41 +22,90 @@ Choose **Delete profile** to select a stored profile. Deletion requires a second
 
 This creates profile metadata, not an SSH key. Existing SSH keys are optional for activation; see the safety behavior below.
 
-### Build or install
+## Install and update
+
+Published packages become available after the first stable release. Git and an
+interactive terminal are needed for the TUI; non-interactive commands need no TTY.
+Choose one installation method to avoid competing executables on `PATH`.
+
+### Homebrew (macOS and Linux)
+
+```sh
+brew install SergioSanchezIglesias/tap/gitvm
+# Later:
+brew update
+brew upgrade gitvm
+```
+
+Homebrew installs a prebuilt binary for Intel/ARM64 macOS or Linux and manages
+version replacement. It does not require Go. If installation or linking fails,
+read Homebrew's error and retry; do not use `sudo` or `brew link --overwrite` to
+replace an unrelated executable.
+
+### Go
+
+Requires Go 1.23 or newer:
+
+```sh
+go install github.com/SergioSanchezIglesias/gitvm-tui/cmd/gitvm@latest
+```
+
+Repeat the command to update, or replace `latest` with a released version such as
+`v0.1.0` to install that version explicitly. The binary goes to `GOBIN`, or
+`$(go env GOPATH)/bin` when unset. Keep this user-owned directory before any
+legacy installation on `PATH`; the command writes only to the selected Go bin
+directory. Avoid a system-wide `GOBIN`.
+
+Run `command -v gitvm` to check which installation wins. Neither method needs
+`sudo` or modifies profile data during installation. A failed download/build
+does not require deleting a working installation; correct the error and retry.
+To return to a previous release, install its explicit Go version.
+
+### Release downloads
+
+[GitHub Releases](https://github.com/SergioSanchezIglesias/gitvm-tui/releases)
+provide `gitvm_<version>_<darwin|linux>_<amd64|arm64>.tar.gz` and `checksums.txt`.
+Verify the archive with `sha256sum --check --ignore-missing checksums.txt` on
+Linux, or `shasum -a 256 -c checksums.txt --ignore-missing` on macOS, before
+extracting. For manual installation, extract into a temporary directory and
+copy `gitvm` into a user-owned bin directory. Leave any system-wide script alone.
+
+### Build from source
 
 Build a local executable:
 
 ```sh
-go build -o gitvm-tui ./cmd/gitvm-tui
-./gitvm-tui
+go build -o gitvm ./cmd/gitvm
+./gitvm
 ```
 
 Or install from this source checkout:
 
 ```sh
-go install ./cmd/gitvm-tui
+go install ./cmd/gitvm
 ```
 
-The installed executable goes to `GOBIN`, or `$(go env GOPATH)/bin` when `GOBIN` is unset. Add that directory to `PATH` to run `gitvm-tui` anywhere.
+The installed executable uses the same Go bin directory described above.
+The command was previously named `gitvm-tui`; new builds and packages use `gitvm`.
 
 ## Command-line activation
 
 Activate an existing profile without opening the TUI or asking for confirmation:
 
 ```sh
-gitvm-tui --user personal
+gitvm --user personal
 # Short form:
-gitvm-tui -u personal
+gitvm -u personal
 # From the source checkout:
-go run ./cmd/gitvm-tui --user personal
+go run ./cmd/gitvm --user personal
 ```
 
 `personal` is the exact, case-sensitive stored **profile ID** (the filename under
 `~/.gitvm/profiles`), not a Git author name, email, or GitHub account. Create the
 profile in the TUI first. Activation needs no interactive terminal. Running
-`gitvm-tui` without arguments still opens the TUI.
+`gitvm` without arguments still opens the TUI.
 
-Use `gitvm-tui --help` or `gitvm-tui -h` for usage without changing anything.
+Use `gitvm --help` or `gitvm -h` for usage without changing anything.
 Help and list output use colors on supported terminals: cyan headings and commands,
 yellow options and email addresses, bold profile names, and green for the saved
 active profile. Text and the `*` marker remain readable without color. Set
@@ -78,7 +127,7 @@ there is no whole-operation rollback.
 
 ## List profiles
 
-Run `gitvm-tui --list` or `gitvm-tui -l` to print valid stored profiles without
+Run `gitvm --list` or `gitvm -l` to print valid stored profiles without
 opening the TUI or changing Git, SSH, profiles, or the current marker:
 
 ```text
@@ -185,3 +234,21 @@ The tests use temporary home directories and injected Git runners to exercise pr
 ## License
 
 [MIT](LICENSE) — Copyright (c) 2026 Sergio Sanchez Iglesias.
+
+## Publishing releases (maintainers)
+
+1. Create a fine-grained GitHub token scoped only to
+   `SergioSanchezIglesias/homebrew-tap`, with **Contents: read and write**.
+   Add it as the `HOMEBREW_TAP_TOKEN` Actions secret in this repository.
+   Never commit or paste the token into source or issue comments.
+2. Merge the release configuration and run the checks above, plus
+   `python3 -m unittest discover -s scripts -p 'test_*.py'`.
+3. Tag the reviewed commit with stable SemVer (for example `v0.1.0`) and push
+   that tag. The Release workflow tests, builds four archives with GoReleaser
+   2.19.0, publishes checksums, and updates `Formula/gitvm.rb` in the tap.
+
+No versions are published just by building locally. Prerelease tags are rejected.
+The normal repository token publishes releases; the separate tap token is used
+only by the Homebrew job. If that job fails, the release remains available:
+correct the credential or tap error and rerun **only the failed Homebrew job**.
+Do not recreate the tag or rerun the successful release job.

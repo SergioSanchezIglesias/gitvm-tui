@@ -32,7 +32,7 @@ func renderHelp(color bool) string {
 		switch {
 		case line == "Usage:" || line == "Options:":
 			lines[i] = paint("1;36", line)
-		case strings.HasPrefix(line, "  gitvm-tui"):
+		case strings.HasPrefix(line, "  gitvm"):
 			lines[i] = "  " + paint("36", strings.TrimPrefix(line, "  "))
 		case strings.HasPrefix(line, "  --"):
 			// Keep descriptions plain and preserve the exact original spacing.
